@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Block Blast</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+    }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background: linear-gradient(145deg, #1a2a3a 0%, #1e2f3f 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .game-wrapper {
+      background: #1e2f3f;
+      border-radius: 3rem;
+      padding: 2rem 2rem 2rem 2rem;
+      box-shadow: 0 20px 30px rgba(0,0,0,0.7), inset 2px 2px 8px rgba(255,255,255,0.08);
+      border: 1px solid #3d5a73;
+    }
+    .game-panel {
+      max-width: 600px;
+      width: 100%;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .title {
+      font-weight: 700;
+      font-size: 2.2rem;
+      letter-spacing: 3px;
+      color: #f5cd7a;
+      text-shadow: 4px 4px 0 #3d2e1a;
+    }
+    .stats {
+      display: flex;
+      gap: 1.5rem;
+      background: #0f1a24;
+      padding: 0.5rem 2rem;
+      border-radius: 40px;
+      box-shadow: inset 0 3px 8px #00000055, 0 6px 0 #0b1219;
+    }
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .stat-label {
+      font-size: 0.8rem;
+      color: #aab8c5;
+      text-transform: uppercase;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #f5d371;
+      line-height: 1.2;
+    }
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 6px;
+      background: #1e3445;
+      padding: 20px;
+      border-radius: 40px;
+      box-shadow: inset 0 0 0 2px #3f5e7a, inset 0 0 20px #00000077, 0 16px 12px #0f1a1f;
+      margin-bottom: 1.8rem;
+    }
+    .cell {
+      aspect-ratio: 1 / 1;
+      background-color: #30485c;
+      border-radius: 12px;
+      box-shadow: inset 0 -4px 0 #1d2c38, 0 0 0 2px #3d5568;
+      transition: background 0.1s, transform 0.1s, box-shadow 0.1s;
+    }
+    .cell.filled {
+      background: #f3a13b;
+      background: linear-gradient(145deg, #f6c358, #e3852b);
+      box-shadow: inset 0 -4px 0 #b45f15, 0 0 0 2px #f5b445;
+    }
+    .cell.preview-ok {
+      background: #42b883;
+      background: linear-gradient(145deg, #47d18c, #2e9e67);
+      box-shadow: inset 0 -4px 0 #1b7943, 0 0 0 2px #6cdb9c;
+    }
+    .cell.preview-bad {
+      background: #d14545;
+      background: linear-gradient(145deg, #e65a5a, #b93a3a);
+      box-shadow: inset 0 -4px 0 #882828, 0 0 0 2px #f28b8b;
+    }
+    .cell.hint-glow {
+      animation: hintPulse 1s infinite;
+      box-shadow: 0 0 15px #f1c40f, 0 0 0 3px #f1c40f;
+      z-index: 2;
+    }
+    @keyframes hintPulse {
+      0% { opacity: 0.9; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.03); }
+      100% { opacity: 0.9; transform: scale(1); }
+    }
+    .shapes-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding: 0 0.5rem;
+    }
+    .shapes-title {
+      color: #ccdeec;
+      font-weight: 600;
+      font-size: 1.3rem;
+      letter-spacing: 1px;
+    }
+    .action-buttons {
+      display: flex;
+      gap: 0.8rem;
+    }
+    .icon-btn {
+      background: #263b4b;
+      border: none;
+      color: white;
+      font-size: 1.3rem;
+      width: 2.8rem;
+      height: 2.8rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 6px 0 #14222b, inset 0 2px 8px #6396b5;
+      transition: all 0.08s linear;
+      font-weight: bold;
+    }
+    .icon-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #14222b, inset 0 2px 8px #6396b5;
+    }
+    .icon-btn:disabled {
+      opacity: 0.4;
+      pointer-events: none;
+      transform: none;
+    }
+    .shapes-panel {
+      display: flex;
+      justify-content: space-around;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+    .shape-item {
+      background: #1e3445;
+      padding: 0.8rem 0.3rem;
+      border-radius: 28px;
+      box-shadow: 0 8px 0 #0f1a24, inset 0 2px 8px #3d6280;
+      cursor: grab;
+      transition: 0.08s ease;
+      border: 2px solid #3a5b78;
+      flex: 1 1 0;
+      min-width: 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+    .shape-item.selected {
+      border: 3px solid #f1c40f;
+      box-shadow: 0 0 20px #f1c40f99, 0 8px 0 #8e6217;
+    }
+    .shape-item.dragging {
+      opacity: 0.5;
+      cursor: grabbing;
+    }
+    .rotate-btn {
+      background: #2c4a62;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      color: white;
+      border: 1px solid #f1c40f;
+      cursor: pointer;
+      box-shadow: 0 3px 0 #1a2c38;
+      margin-top: 5px;
+      transition: 0.05s linear;
+    }
+    .rotate-btn:active {
+      transform: translateY(3px);
+      box-shadow: none;
+    }
+    .shape-grid {
+      display: inline-grid;
+      gap: 5px;
+      background: transparent;
+      padding: 8px;
+      pointer-events: none;
+    }
+    .shape-cell {
+      width: 28px;
+      height: 28px;
+      background: #f39c12;
+      background: radial-gradient(circle at 30% 30%, #f9d56e, #f39c12);
+      border-radius: 8px;
+      box-shadow: inset 0 -3px 0 #b85e0e, 0 0 0 1px #f7b731;
+    }
+    .shape-cell.empty {
+      background: transparent;
+      box-shadow: none;
+    }
+    /* призрак перетаскивания */
+    .drag-ghost {
+      position: fixed;
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0.8;
+      transform: translate(-50%, -50%);
+      background: #1e3445dd;
+      backdrop-filter: blur(4px);
+      border-radius: 20px;
+      padding: 8px;
+      border: 2px solid #f1c40f;
+      box-shadow: 0 10px 20px black;
+    }
+    .new-game-btn {
+      background: #386582;
+      border: none;
+      color: white;
+      font-size: 1.3rem;
+      font-weight: 600;
+      padding: 0.8rem 2rem;
+      border-radius: 40px;
+      box-shadow: 0 8px 0 #1e3342, inset 0 2px 12px #a5cbee;
+      cursor: pointer;
+      transition: 0.08s linear;
+      text-transform: uppercase;
+      margin-top: 0.8rem;
+      width: fit-content;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .new-game-btn:active {
+      transform: translateY(5px);
+      box-shadow: 0 3px 0 #1e3342, inset 0 2px 12px #a5cbee;
+    }
+    .game-over-message {
+      text-align: center;
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #e74c3c;
+      -webkit-text-stroke: 1px #1e2f3f;
+      margin-top: 0.5rem;
+      background: #17222b;
+      padding: 0.5rem 2rem;
+      border-radius: 40px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-wrapper">
+    <div class="game-panel">
+      <div class="header">
+        <span class="title">B L O C K  B L A S T</span>
+        <div class="stats">
+          <div class="stat-item">
+            <span class="stat-label">СЧЁТ</span>
+            <span class="stat-value" id="scoreDisplay">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">РЕКОРД</span>
+            <span class="stat-value" id="recordDisplay">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="gridContainer" class="grid-container"></div>
+
+      <div class="shapes-header">
+        <span class="shapes-title">Фигуры (тащи на поле)</span>
+        <div class="action-buttons">
+          <button class="icon-btn" id="hintBtn" title="подсказать ход">💡</button>
+          <button class="icon-btn" id="refreshShapesBtn" title="обновить фигуры">⟳</button>
+        </div>
+      </div>
+      <div id="shapesContainer" class="shapes-panel"></div>
+
+      <div style="display: flex; justify-content: center; gap: 1.5rem; align-items: center;">
+        <button class="new-game-btn" id="newGameBtn">🔄 Новая игра</button>
+      </div>
+      <div id="gameOverMsg" class="game-over-message" style="display: none;">⚠️ ИГРА ОКОНЧЕНА</div>
+    </div>
+  </div>
+
+  <!-- призрак для drag & drop -->
+  <div id="dragGhost" class="drag-ghost" style="display: none;"></div>
+
+  <script>
+    (function() {
+      // ---------- НАСТРОЙКИ ----------
+      const SIZE = 8;
+      let grid = [];
+      let score = 0;
+      let record = localStorage.getItem('blockBlastRecord') ? parseInt(localStorage.getItem('blockBlastRecord')) : 0;
+
+      // библиотека фигур (базовые матрицы)
+      const SHAPES_LIB = [
+        { matrix: [[1, 1, 1, 1]] },                       // I гор
+        { matrix: [[1], [1], [1], [1]] },                  // I верт
+        { matrix: [[1, 1], [1, 1]] },                       // квадрат
+        { matrix: [[1, 0], [1, 0], [1, 1]] },               // L
+        { matrix: [[0, 1], [0, 1], [1, 1]] },               // L зерк
+        { matrix: [[1, 1, 1], [0, 1, 0]] },                  // T
+        { matrix: [[0, 1, 1], [1, 1, 0]] },                  // S
+        { matrix: [[1, 1, 1]] }                              // палка 3
+      ];
+
+      // текущие фигуры (объекты с матрицей и индексом в библиотеке)
+      let currentShapes = [];
+      let selectedShapeIndex = -1;          // индекс в currentShapes, -1 если ничего не выбрано
+      let gameOverFlag = false;
+
+      // drag state
+      let isDragging = false;
+      let draggedShapeIndex = -1;
+      let dragOffsetX = 0, dragOffsetY = 0;   // смещение внутри фигуры (не используется, призрак по центру)
+      let ghostElement = document.getElementById('dragGhost');
+      let lastValidRow = -1, lastValidCol = -1; // для предпросмотра при drag
+
+      // DOM
+      const gridContainer = document.getElementById('gridContainer');
+      const shapesContainer = document.getElementById('shapesContainer');
+      const scoreSpan = document.getElementById('scoreDisplay');
+      const recordSpan = document.getElementById('recordDisplay');
+      const gameOverDiv = document.getElementById('gameOverMsg');
+      const hintBtn = document.getElementById('hintBtn');
+      const refreshBtn = document.getElementById('refreshShapesBtn');
+      const newGameBtn = document.getElementById('newGameBtn');
+
+      // ---------- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ----------
+      function rotateMatrix(mat) {
+        // поворот на 90° по часовой
+        const rows = mat.length, cols = mat[0].length;
+        const rotated = Array(cols).fill().map(() => Array(rows));
+        for (let i = 0; i < rows; i++) {
+          for (let j = 0; j < cols; j++) {
+            rotated[j][rows - 1 - i] = mat[i][j];
+          }
+        }
+        return rotated;
+      }
+
+      function randomShape() {
+        const idx = Math.floor(Math.random() * SHAPES_LIB.length);
+        return {
+          matrix: SHAPES_LIB[idx].matrix.map(row => [...row]),
+          libIndex: idx
+        };
+      }
+
+      function initShapes() {
+        currentShapes = [];
+        for (let i = 0; i < 3; i++) currentShapes.push(randomShape());
+      }
+
+      // обновить рекорд
+      function updateRecord() {
+        if (score > record) {
+          record = score;
+          localStorage.setItem('blockBlastRecord', record);
+        }
+        recordSpan.textContent = record;
+      }
+
+      // ---------- РАБОТА С ПОЛЕМ ----------
+      function canPlaceShape(matrix, startRow, startCol) {
+        const rows = matrix.length, cols = matrix[0].length;
+        if (startRow + rows > SIZE || startCol + cols > SIZE) return false;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            if (matrix[r][c] === 1 && grid[startRow + r][startCol + c] === 1) return false;
+          }
+        }
+        return true;
+      }
+
+      function placeShape(matrix, startRow, startCol) {
+        const rows = matrix.length, cols = matrix[0].length;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            if (matrix[r][c] === 1) grid[startRow + r][startCol + c] = 1;
+          }
+        }
+      }
+
+      // анимированное удаление линий
+      function clearFullLinesWithAnimation(callback) {
+        const rowsToClear = [], colsToClear = [];
+        for (let r = 0; r < SIZE; r++) if (grid[r].every(c => c === 1)) rowsToClear.push(r);
+        for (let c = 0; c < SIZE; c++) {
+          let full = true;
+          for (let r = 0; r < SIZE; r++) if (grid[r][c] === 0) { full = false; break; }
+          if (full) colsToClear.push(c);
+        }
+
+        if (rowsToClear.length === 0 && colsToClear.length === 0) {
+          if (callback) callback();
+          return;
+        }
+
+        // подсветим удаляемые клетки
+        const cellsToHighlight = [];
+        rowsToClear.forEach(r => { for (let c = 0; c < SIZE; c++) cellsToHighlight.push([r, c]); });
+        colsToClear.forEach(c => { for (let r = 0; r < SIZE; r++) cellsToHighlight.push([r, c]); });
+
+        cellsToHighlight.forEach(([r, c]) => {
+          const cellDiv = document.querySelector(`.cell[data-row='${r}'][data-col='${c}']`);
+          if (cellDiv) cellDiv.style.backgroundColor = '#f7d44a';
+        });
+
+        setTimeout(() => {
+          // очищаем
+          rowsToClear.forEach(r => { for (let c = 0; c < SIZE; c++) grid[r][c] = 0; });
+          colsToClear.forEach(c => { for (let r = 0; r < SIZE; r++) grid[r][c] = 0; });
+
+          const clearedCount = cellsToHighlight.length;
+          score += clearedCount;
+          updateRecord();
+
+          // убрать подсветку и перерисовать
+          renderGrid();
+          if (callback) callback();
+        }, 150);
+      }
+
+      // замена фигуры после использования
+      function replaceShape(shapeIndex) {
+        if (shapeIndex >= 0 && shapeIndex < currentShapes.length) {
+          currentShapes[shapeIndex] = randomShape();
+        }
+      }
+
+      // проверка game over
+      function isGameOver() {
+        for (let s = 0; s < currentShapes.length; s++) {
+          const matrix = currentShapes[s].matrix;
+          const rows = matrix.length, cols = matrix[0].length;
+          for (let r = 0; r <= SIZE - rows; r++) {
+            for (let c = 0; c <= SIZE - cols; c++) {
+              if (canPlaceShape(matrix, r, c)) return false;
+            }
+          }
+        }
+        return true;
+      }
+
+      // отмена выделения
+      function deselectShape() {
+        selectedShapeIndex = -1;
+        renderShapes();
+        clearPreview();
+      }
+
+      // ---------- ОТРИСОВКА ----------
+      function renderGrid() {
+        gridContainer.innerHTML = '';
+        for (let r = 0; r < SIZE; r++) {
+          for (let c = 0; c < SIZE; c++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell' + (grid[r][c] === 1 ? ' filled' : '');
+            cell.dataset.row = r;
+            cell.dataset.col = c;
+
+            // события для предпросмотра при наведении (если не drag)
+            cell.addEventListener('mouseenter', onCellMouseEnter);
+            cell.addEventListener('mouseleave', onCellMouseLeave);
+            // клик для размещения (если не drag)
+            cell.addEventListener('click', onCellClick);
+
+            gridContainer.appendChild(cell);
+          }
+        }
+      }
+
+      function clearPreview() {
+        document.querySelectorAll('.cell').forEach(c => c.classList.remove('preview-ok', 'preview-bad', 'hint-glow'));
+      }
+
+      function renderShapes() {
+        shapesContainer.innerHTML = '';
+        currentShapes.forEach((shape, idx) => {
+          const matrix = shape.matrix;
+          const rows = matrix.length, cols = matrix[0].length;
+
+          const shapeDiv = document.createElement('div');
+          shapeDiv.className = `shape-item ${selectedShapeIndex === idx ? 'selected' : ''}`;
+          shapeDiv.dataset.shapeIndex = idx;
+          shapeDiv.setAttribute('draggable', 'false');
+
+          const gridDiv = document.createElement('div');
+          gridDiv.className = 'shape-grid';
+          gridDiv.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+              const cell = document.createElement('div');
+              cell.className = matrix[r][c] === 1 ? 'shape-cell' : 'shape-cell empty';
+              gridDiv.appendChild(cell);
+            }
+          }
+          shapeDiv.appendChild(gridDiv);
+
+          // кнопка вращения
+          const rotateBtn = document.createElement('div');
+          rotateBtn.className = 'rotate-btn';
+          rotateBtn.innerHTML = '↻';
+          rotateBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (gameOverFlag) return;
+            // вращаем выбранную фигуру
+            currentShapes[idx].matrix = rotateMatrix(currentShapes[idx].matrix);
+            renderShapes();
+            clearPreview();
+          });
+          shapeDiv.appendChild(rotateBtn);
+
+          // drag start
+          shapeDiv.addEventListener('mousedown', (e) => {
+            if (gameOverFlag) return;
+            e.preventDefault();
+            // если клик на кнопке вращения — не начинаем драг
+            if (e.target.classList.contains('rotate-btn')) return;
+
+            startDrag(e, idx);
+          });
+
+          shapesContainer.appendChild(shapeDiv);
+        });
+      }
+
+      // ---------- DRAG & DROP ----------
+      function startDrag(e, shapeIdx) {
+        isDragging = true;
+        draggedShapeIndex = shapeIdx;
+        selectedShapeIndex = shapeIdx;   // выделяем фигуру
+        renderShapes();
+
+        const shape = currentShapes[shapeIdx];
+        const matrix = shape.matrix;
+        const rows = matrix.length, cols = matrix[0].length;
+
+        // создаём призрак
+        ghostElement.style.display = 'grid';
+        ghostElement.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        ghostElement.innerHTML = '';
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const cell = document.createElement('div');
+            cell.className = matrix[r][c] === 1 ? 'shape-cell' : 'shape-cell empty';
+            cell.style.width = '28px';
+            cell.style.height = '28px';
+            ghostElement.appendChild(cell);
+          }
+        }
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        dragOffsetX = e.clientX - rect.left;
+        dragOffsetY = e.clientY - rect.top;
+
+        updateGhostPosition(e.clientX, e.clientY);
+
+        document.addEventListener('mousemove', onDragMove);
+        document.addEventListener('mouseup', onDragEnd);
+      }
+
+      function updateGhostPosition(clientX, clientY) {
+        ghostElement.style.left = clientX + 'px';
+        ghostElement.style.top = clientY + 'px';
+      }
+
+      function onDragMove(e) {
+        if (!isDragging) return;
+        e.preventDefault();
+        updateGhostPosition(e.clientX, e.clientY);
+
+        // найти ячейку поля под мышью
+        const elemUnderMouse = document.elementFromPoint(e.clientX, e.clientY);
+        if (elemUnderMouse && elemUnderMouse.classList.contains('cell')) {
+          const row = parseInt(elemUnderMouse.dataset.row);
+          const col = parseInt(elemUnderMouse.dataset.col);
+          if (!isNaN(row) && !isNaN(col)) {
+            showPreviewForPosition(row, col, draggedShapeIndex);
+            lastValidRow = row; lastValidCol = col;
+          } else {
+            clearPreview();
+          }
+        } else {
+          clearPreview();
+        }
+      }
+
+      function showPreviewForPosition(row, col, shapeIdx) {
+        clearPreview();
+        const shape = currentShapes[shapeIdx];
+        if (!shape) return;
+        const matrix = shape.matrix;
+        const rows = matrix.length, cols = matrix[0].length;
+
+        if (row + rows > SIZE || col + cols > SIZE) {
+          // вне поля — подсветка красным, но только видимые клетки
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+              if (matrix[r][c] === 1) {
+                const targetRow = row + r, targetCol = col + c;
+                if (targetRow < SIZE && targetCol < SIZE) {
+                  const cell = document.querySelector(`.cell[data-row='${targetRow}'][data-col='${targetCol}']`);
+                  if (cell) cell.classList.add('preview-bad');
+                }
+              }
+            }
+          }
+          return;
+        }
+
+        const ok = canPlaceShape(matrix, row, col);
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            if (matrix[r][c] === 1) {
+              const targetRow = row + r, targetCol = col + c;
+              const cell = document.querySelector(`.cell[data-row='${targetRow}'][data-col='${targetCol}']`);
+              if (cell) cell.classList.add(ok ? 'preview-ok' : 'preview-bad');
+            }
+          }
+        }
+      }
+
+      function onDragEnd(e) {
+        if (!isDragging) return;
+        isDragging = false;
+        ghostElement.style.display = 'none';
+
+        // попытка разместить, если есть валидная позиция
+        if (lastValidRow !== -1 && lastValidCol !== -1) {
+          attemptPlaceFromDrag(lastValidRow, lastValidCol, draggedShapeIndex);
+        }
+
+        document.removeEventListener('mousemove', onDragMove);
+        document.removeEventListener('mouseup', onDragEnd);
+        lastValidRow = lastValidCol = -1;
+        clearPreview();
+        renderShapes(); // обновить вид фигур (убрать затемнение)
+      }
+
+      function attemptPlaceFromDrag(row, col, shapeIdx) {
+        if (gameOverFlag) return;
+        const shape = currentShapes[shapeIdx];
+        if (!shape) return;
+        const matrix = shape.matrix;
+        if (!canPlaceShape(matrix, row, col)) return;
+
+        placeShape(matrix, row, col);
+        // анимированное удаление линий
+        clearFullLinesWithAnimation(() => {
+          replaceShape(shapeIdx);
+          selectedShapeIndex = -1;
+          renderGrid();
+          renderShapes();
+          if (isGameOver()) gameOverDiv.style.display = 'block';
+          else gameOverDiv.style.display = 'none';
+        });
+        // немедленно обновляем счёт (анимация обновит потом)
+        scoreSpan.textContent = score;
+        updateRecord();
+      }
+
+      // ---------- ОБРАБОТЧИКИ БЕЗ DRAG (клики и наведение) ----------
+      function onCellMouseEnter(e) {
+        if (gameOverFlag || isDragging) return;
+        if (selectedShapeIndex === -1) return;
+        const row = parseInt(e.currentTarget.dataset.row);
+        const col = parseInt(e.currentTarget.dataset.col);
+        showPreviewForPosition(row, col, selectedShapeIndex);
+      }
+
+      function onCellMouseLeave() {
+        if (isDragging) return;
+        clearPreview();
+      }
+
+      function onCellClick(e) {
+        if (gameOverFlag || isDragging) return;
+        if (selectedShapeIndex === -1) return;
+        const row = parseInt(e.currentTarget.dataset.row);
+        const col = parseInt(e.currentTarget.dataset.col);
+        const shape = currentShapes[selectedShapeIndex];
+        if (!shape) return;
+        if (!canPlaceShape(shape.matrix, row, col)) return;
+
+        placeShape(shape.matrix, row, col);
+        clearFullLinesWithAnimation(() => {
+          replaceShape(selectedShapeIndex);
+          selectedShapeIndex = -1;
+          renderGrid();
+          renderShapes();
+          if (isGameOver()) gameOverDiv.style.display = 'block';
+          else gameOverDiv.style.display = 'none';
+        });
+        scoreSpan.textContent = score;
+        updateRecord();
+      }
+
+      // ---------- ПОДСКАЗКА ----------
+      function showHint() {
+        if (gameOverFlag) return;
+        // ищем первое возможное размещение для любой фигуры
+        for (let s = 0; s < currentShapes.length; s++) {
+          const matrix = currentShapes[s].matrix;
+          const rows = matrix.length, cols = matrix[0].length;
+          for (let r = 0; r <= SIZE - rows; r++) {
+            for (let c = 0; c <= SIZE - cols; c++) {
+              if (canPlaceShape(matrix, r, c)) {
+                // подсветить угловую ячейку
+                const cell = document.querySelector(`.cell[data-row='${r}'][data-col='${c}']`);
+                if (cell) cell.classList.add('hint-glow');
+                // также можно выбрать эту фигуру
+                selectedShapeIndex = s;
+                renderShapes();
+                return;
+              }
+            }
+          }
+        }
+      }
+
+      // ---------- НОВАЯ ИГРА ----------
+      function newGame() {
+        grid = Array(SIZE).fill().map(() => Array(SIZE).fill(0));
+        score = 0;
+        gameOverFlag = false;
+        selectedShapeIndex = -1;
+        initShapes();
+        renderGrid();
+        renderShapes();
+        gameOverDiv.style.display = 'none';
+        scoreSpan.textContent = score;
+        updateRecord();
+        clearPreview();
+      }
+
+      // ---------- ОБНОВЛЕНИЕ ФИГУР (перемешивание) ----------
+      function refreshShapes() {
+        if (gameOverFlag) return;
+        initShapes();
+        selectedShapeIndex = -1;
+        renderShapes();
+        clearPreview();
+      }
+
+      // ---------- ИНИЦИАЛИЗАЦИЯ ----------
+      function init() {
+        newGame();
+
+        hintBtn.addEventListener('click', () => { showHint(); });
+        refreshBtn.addEventListener('click', () => { refreshShapes(); });
+        newGameBtn.addEventListener('click', () => { newGame(); });
+
+        // клик вне всего для снятия выделения
+        document.addEventListener('click', (e) => {
+          if (!e.target.closest('.shape-item') && !e.target.closest('.cell') && !e.target.closest('.rotate-btn')) {
+            deselectShape();
+          }
+        });
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
